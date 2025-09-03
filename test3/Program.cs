@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 
 namespace MusicEvo
 {
@@ -596,13 +597,19 @@ namespace MusicEvo
             Console.WriteLine($"\nУсловна ентропия H(G|X) = {Hcond:F6}  |  Нормализирана предсказуемост C̄ = {Cbar:F6}");
 
             var rowsEntropy = new List<string[]>();
-            rowsEntropy.Add(new[] { "state", "p(x)", "H_tilde(x)=H(G|X=x)", "C(x)=1-H/lnK" });
-            rowsEntropy.AddRange(entropyRows.Select(e => new[]
+            rowsEntropy.Add(new[] { "state", "p(x)", "H(G|X)" ,"H_tilde(x)=H(G|X=x)", "C(x)=1-H/lnK" });
+            rowsEntropy.AddRange(entropyRows.Select(e =>
             {
+                var Htilde = e.Hx / Math.Log(K);   // ← истинската нормализирана
+                var C = 1.0 - Htilde;
+                return new[]
+                {
                 e.x.ToString(),
                 e.px.ToString("F6", CultureInfo.InvariantCulture),
-                e.Hx.ToString("F6", CultureInfo.InvariantCulture),
-                e.Cx.ToString("F6", CultureInfo.InvariantCulture),
+                e.Hx.ToString("F6", CultureInfo.InvariantCulture),        // H (nats) – информативно
+                Htilde.ToString("F6", CultureInfo.InvariantCulture),      // H~ ∈ [0,1]
+                C.ToString("F6", CultureInfo.InvariantCulture)            // C ∈ [0,1]
+            };
             }));
             WriteNote(Path.Combine(cfg.OutDir, "entropy_summary.txt"), rowsEntropy, "Entropy Summary");
 
@@ -648,7 +655,7 @@ namespace MusicEvo
                     var idxU = Enumerable.Range(0, K).OrderByDescending(i => u[i]).Take(3).ToArray();
                     var idxX = Enumerable.Range(0, K).OrderByDescending(i => xStar[i]).Take(3).ToArray();
 
-                    Console.WriteLine($"\n[{MoodBg(m)} × {StratBg(s)}]  (H~={Hx:F3}, C={Cx:F3})");
+                    Console.WriteLine($"\n[{MoodBg(m)} × {StratBg(s)}]  (H~={Hx/Math.Log(K):F3}, C={Cx:F3})");
                     Console.WriteLine("Топ по u:    " + string.Join(", ", idxU.Select(i => $"{GenreNameEn(genres[i])} ({u[i]:F3})")));
                     Console.WriteLine("Топ по x*:   " + string.Join(", ", idxX.Select(i => $"{GenreNameEn(genres[i])} ({xStar[i]:F3})")));
 
